@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LobsterTrap — Deploy agents to OpenClaw in 5 minutes</title>
+  <meta name="description" content="Choose a template, run one command, monitor your AI agents from a live dashboard. No DevOps required." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red: #e63946;
+      --red-dark: #c1121f;
+      --bg: #080808;
+      --surface: #111;
+      --surface2: #171717;
+      --border: #1f1f1f;
+      --text: #e8e8e8;
+      --muted: #555;
+      --muted2: #333;
+      --green: #4ade80;
+      --purple: #7c3aed;
+      --cyan: #22d3ee;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+      background: rgba(8,8,8,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 1.05rem; }
+    .nav-logo span.emoji { font-size: 1.3rem; }
+    .nav-links { display: flex; gap: 2rem; color: var(--muted); font-size: 0.9rem; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--red); color: #fff;
+      padding: 0.45rem 1.1rem; border-radius: 7px;
+      font-size: 0.88rem; font-weight: 600;
+      transition: background 0.15s;
+    }
+    .nav-cta:hover { background: var(--red-dark); }
+
+    /* ── HERO ── */
+    .hero {
+      max-width: 1100px; margin: 0 auto;
+      padding: 7rem 2rem 4rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      background: #1a1a1a; border: 1px solid #2a2a2a;
+      border-radius: 999px; padding: 4px 12px;
+      font-size: 0.78rem; color: var(--muted); margin-bottom: 1.5rem;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; display: inline-block; }
+    .hero h1 {
+      font-size: clamp(2.2rem, 4vw, 3.2rem);
+      font-weight: 800; line-height: 1.1;
+      letter-spacing: -0.04em;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 .accent { color: var(--red); }
+    .hero p {
+      color: #999; font-size: 1.05rem; line-height: 1.7;
+      margin-bottom: 2rem; max-width: 440px;
+    }
+    .hero-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--red); color: #fff;
+      padding: 0.7rem 1.4rem; border-radius: 8px;
+      font-weight: 700; font-size: 0.95rem;
+      transition: background 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .btn-primary:hover { background: var(--red-dark); transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+      padding: 0.7rem 1.4rem; border-radius: 8px;
+      border: 1px solid var(--border); font-size: 0.95rem;
+      transition: border-color 0.15s, color 0.15s;
+      display: inline-flex; align-items: center; gap: 0.4rem;
+    }
+    .btn-ghost:hover { border-color: #444; color: var(--text); }
+    .hero-sub { margin-top: 1.25rem; font-size: 0.8rem; color: var(--muted2); }
+    .hero-sub span { color: var(--muted); }
+
+    /* Terminal */
+    .terminal {
+      background: #0d0d0d; border: 1px solid #222;
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .terminal-bar {
+      background: #161616; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-title { font-size: 0.75rem; color: #444; margin-left: 0.5rem; }
+    .terminal-body { padding: 1.25rem 1.5rem; font-family: 'Monaco', 'Menlo', monospace; font-size: 0.82rem; line-height: 1.9; }
+    .t-prompt { color: var(--red); }
+    .t-cmd { color: #e0e0e0; }
+    .t-comment { color: #444; }
+    .t-success { color: var(--green); }
+    .t-info { color: #888; }
+    .t-cyan { color: var(--cyan); }
+    .t-line { display: flex; gap: 0.6rem; }
+    .cursor {
+      display: inline-block; width: 8px; height: 14px;
+      background: var(--red); vertical-align: middle;
+      animation: blink 1.1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── LOGOS STRIP ── */
+    .logos-strip {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex; align-items: center; justify-content: center; gap: 3rem;
+      color: var(--muted2); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em;
+      flex-wrap: wrap;
+    }
+    .logos-strip span { color: #333; }
+
+    /* ── SECTION SHARED ── */
+    section { padding: 6rem 2rem; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--red); margin-bottom: 0.75rem;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 800;
+      letter-spacing: -0.035em; line-height: 1.15; margin-bottom: 1rem;
+    }
+    .section-sub { color: #777; font-size: 1rem; max-width: 540px; line-height: 1.7; }
+
+    /* ── HOW IT WORKS ── */
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;
+      margin-top: 3.5rem;
+    }
+    .how-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 2rem;
+      position: relative; overflow: hidden;
+    }
+    .how-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--red), transparent);
+    }
+    .how-number {
+      font-size: 2.5rem; font-weight: 900; color: #1a1a1a;
+      line-height: 1; margin-bottom: 1rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .how-icon { font-size: 1.6rem; margin-bottom: 0.75rem; }
+    .how-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .how-card p { color: #666; font-size: 0.88rem; line-height: 1.6; }
+    .how-code {
+      margin-top: 1rem; background: #0d0d0d; border: 1px solid #1e1e1e;
+      border-radius: 7px; padding: 0.6rem 0.9rem;
+      font-family: monospace; font-size: 0.78rem; color: #888;
+    }
+    .how-code .c-red { color: var(--red); }
+    .how-code .c-green { color: var(--green); }
+
+    /* ── TEMPLATES ── */
+    .templates-bg { background: var(--surface); }
+    .templates-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem; margin-top: 3rem;
+    }
+    .template-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 14px; padding: 1.75rem;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .template-card:hover { border-color: #333; transform: translateY(-2px); }
+    .template-icon { font-size: 2rem; margin-bottom: 1rem; }
+    .template-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .template-card p { color: #666; font-size: 0.85rem; line-height: 1.6; margin-bottom: 1rem; }
+    .template-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .tag {
+      background: #141414; border: 1px solid #222;
+      border-radius: 999px; padding: 2px 10px;
+      font-size: 0.72rem; color: #555;
+    }
+    .endpoints {
+      margin-top: 1rem; background: #0a0a0a; border: 1px solid #1a1a1a;
+      border-radius: 8px; padding: 0.75rem;
+      font-family: monospace; font-size: 0.75rem;
+    }
+    .endpoint { color: #555; margin-bottom: 2px; }
+    .endpoint .method-get { color: var(--green); }
+    .endpoint .method-post { color: var(--cyan); }
+    .endpoint .path { color: #777; }
+
+    /* ── DASHBOARD PREVIEW ── */
+    .dashboard-preview {
+      margin-top: 3.5rem; background: #0d0d0d;
+      border: 1px solid #1e1e1e; border-radius: 16px; overflow: hidden;
+      box-shadow: 0 32px 100px rgba(0,0,0,0.7);
+    }
+    .db-header {
+      background: #101010; border-bottom: 1px solid #1a1a1a;
+      padding: 0.9rem 1.25rem;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .db-logo { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 700; }
+    .db-status { font-size: 0.75rem; color: #555; display: flex; align-items: center; gap: 0.4rem; }
+    .db-body { display: flex; height: 380px; }
+    .db-sidebar {
+      width: 200px; border-right: 1px solid #1a1a1a;
+      padding: 0.85rem; display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .db-sidebar-label { font-size: 0.65rem; color: #333; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.25rem; padding-left: 0.25rem; }
+    .db-agent-item {
+      background: #141414; border: 1px solid #252525;
+      border-radius: 9px; padding: 0.75rem;
+    }
+    .db-agent-item.active { background: #1a1a2e; border-color: #7c3aed44; }
+    .db-agent-name { font-size: 0.82rem; font-weight: 700; margin-bottom: 0.2rem; }
+    .db-agent-meta { font-size: 0.7rem; color: #555; }
+    .db-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      border-radius: 999px; padding: 1px 8px; font-size: 0.65rem; font-weight: 600; float: right;
+    }
+    .pill-running { background: #0d2a1a; color: var(--green); }
+    .pill-stopped { background: #2a0d0d; color: #f87171; }
+    .db-main { flex: 1; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+    .db-tabs { display: flex; gap: 0.25rem; }
+    .db-tab {
+      padding: 4px 14px; border-radius: 6px; font-size: 0.78rem;
+      border: 1px solid transparent; cursor: pointer;
+    }
+    .db-tab.active { background: #1e1e2e; border-color: #333; color: #e0e0e0; font-weight: 600; }
+    .db-tab:not(.active) { color: #555; }
+    .db-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+    .db-stat { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 8px; padding: 0.75rem; }
+    .db-stat-label { font-size: 0.65rem; color: #444; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+    .db-stat-val { font-size: 0.95rem; font-weight: 600; }
+    .db-chart-area {
+      flex: 1; background: #0a0a0a; border: 1px solid #1a1a1a;
+      border-radius: 8px; padding: 0.75rem; position: relative; overflow: hidden;
+    }
+    .db-chart-label { font-size: 0.65rem; color: #444; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .db-chart-svg { width: 100%; height: calc(100% - 1.5rem); }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+      margin-top: 3.5rem; align-items: start;
+    }
+    .pricing-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 2rem; position: relative;
+    }
+    .pricing-card.popular {
+      border-color: var(--red);
+      background: linear-gradient(180deg, #1a0a0a 0%, var(--surface) 100%);
+    }
+    .popular-badge {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      background: var(--red); color: #fff;
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      padding: 3px 12px; border-radius: 999px;
+    }
+    .plan-name { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.75rem; }
+    .plan-price { font-size: 2.8rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+    .plan-price sup { font-size: 1.2rem; font-weight: 700; vertical-align: super; }
+    .plan-price .period { font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+    .plan-tagline { color: #666; font-size: 0.85rem; margin: 0.75rem 0 1.5rem; }
+    .plan-divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+    .plan-features { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.75rem; }
+    .plan-features li { display: flex; gap: 0.6rem; font-size: 0.87rem; color: #bbb; align-items: flex-start; }
+    .plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .plan-features li.dim { color: #444; }
+    .plan-features li.dim::before { content: '–'; color: #333; }
+    .plan-btn {
+      width: 100%; padding: 0.75rem; border-radius: 9px;
+      font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      border: none; transition: background 0.15s, transform 0.1s;
+    }
+    .plan-btn:hover { transform: translateY(-1px); }
+    .plan-btn-primary { background: var(--red); color: #fff; }
+    .plan-btn-primary:hover { background: var(--red-dark); }
+    .plan-btn-ghost { background: #1a1a1a; color: var(--muted); border: 1px solid var(--border); }
+    .plan-btn-ghost:hover { background: #222; color: var(--text); }
+    .pricing-note { text-align: center; color: var(--muted2); font-size: 0.8rem; margin-top: 1.5rem; }
+    .pricing-note a { color: var(--muted); text-decoration: underline; }
+
+    /* ── FEATURES ── */
+    .features-bg { background: var(--surface); }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+      margin-top: 3rem;
+    }
+    .feature-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem;
+    }
+    .feature-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+    .feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .feature-card p { color: #666; font-size: 0.83rem; line-height: 1.6; }
+
+    /* ── CTA ── */
+    .cta-section { text-align: center; padding: 8rem 2rem; }
+    .cta-section h2 {
+      font-size: clamp(2rem, 4vw, 3rem); font-weight: 900;
+      letter-spacing: -0.04em; margin-bottom: 1rem;
+    }
+    .cta-section p { color: #666; font-size: 1rem; margin-bottom: 2.5rem; }
+    .cta-terminal {
+      display: inline-block; background: #0d0d0d;
+      border: 1px solid #222; border-radius: 10px;
+      padding: 0.8rem 1.5rem; font-family: monospace; font-size: 0.88rem;
+      margin-bottom: 2rem; color: #888;
+    }
+    .cta-terminal .c-red { color: var(--red); }
+    .cta-terminal .c-white { color: #e0e0e0; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2.5rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      color: var(--muted2); font-size: 0.82rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .footer-logo { display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--muted); }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-links a { color: var(--muted2); transition: color 0.15s; }
+    .footer-links a:hover { color: var(--muted); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; gap: 3rem; padding-top: 4rem; }
+      .how-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .db-sidebar { display: none; }
+      nav .nav-links { display: none; }
+    }
+    @media (max-width: 600px) {
+      .features-grid { grid-template-columns: 1fr; }
+      .db-stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <span class="emoji">🦞</span>
+    <span>LobsterTrap</span>
+  </div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#templates">Templates</a>
+    <a href="#pricing">Pricing</a>
+    <a href="https://github.com/psych1cparr0t-dev/lobstertrap" target="_blank">GitHub</a>
+  </div>
+  <a href="#pricing" class="nav-cta">Get Started →</a>
+</nav>
+
+<!-- HERO -->
+<section style="padding-bottom: 0;">
+  <div class="hero">
+    <div>
+      <div class="hero-badge">
+        <span class="dot"></span>
+        Built for OpenClaw · v0.1.0
+      </div>
+      <h1>Deploy agents<br>in <span class="accent">5 minutes.</span><br>Not 5 days.</h1>
+      <p>LobsterTrap is the CLI that takes you from zero to a running AI agent — Dockerfile, config, integrations, monitoring — with one command.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn-primary">Start free →</a>
+        <a href="https://github.com/psych1cparr0t-dev/lobstertrap" class="btn-ghost" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <p class="hero-sub">Free for 1 agent · <span>No credit card required</span></p>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="term-dot" style="background:#ff5f57"></div>
+        <div class="term-dot" style="background:#febc2e"></div>
+        <div class="term-dot" style="background:#28c840"></div>
+        <span class="term-title">lobstertrap — zsh</span>
+      </div>
+      <div class="terminal-body">
+        <div class="t-line"><span class="t-comment"># Install once</span></div>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> npm install -g lobstertrap</span></div>
+        <div class="t-line" style="height:0.5rem"></div>
+        <div class="t-line"><span class="t-comment"># Initialize OpenClaw</span></div>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> lobstertrap init-openclaw</span></div>
+        <div class="t-line"><span class="t-success">✓ Docker is running</span></div>
+        <div class="t-line"><span class="t-success">✓ OpenClaw ready at ~/.lobstertrap</span></div>
+        <div class="t-line" style="height:0.5rem"></div>
+        <div class="t-line"><span class="t-comment"># Create your agent</span></div>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> lobstertrap new</span></div>
+        <div class="t-line"><span class="t-info">? Agent name: </span><span class="t-cyan">SalesBot</span></div>
+        <div class="t-line"><span class="t-info">? Template: </span><span class="t-cyan">Sales Agent</span></div>
+        <div class="t-line"><span class="t-success">✓ Agent files generated</span></div>
+        <div class="t-line" style="height:0.5rem"></div>
+        <div class="t-line"><span class="t-comment"># Ship it</span></div>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> lobstertrap deploy SalesBot</span></div>
+        <div class="t-line"><span class="t-success">✓ Image built: salesbot</span></div>
+        <div class="t-line"><span class="t-success">✓ Agent is healthy</span></div>
+        <div class="t-line"><span class="t-cyan">  → http://localhost:8000</span></div>
+        <div class="t-line" style="height:0.5rem"></div>
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd"> </span><span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOGOS -->
+<div class="logos-strip">
+  <span>Works with</span>
+  <span>🐳 Docker</span>
+  <span>☸️ Kubernetes</span>
+  <span>🤖 Claude API</span>
+  <span>📧 Gmail</span>
+  <span>📊 Airtable</span>
+  <span>💬 Slack</span>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-inner">
+    <div class="section-tag">How it works</div>
+    <h2 class="section-title">From install to live agent<br>in under 5 minutes.</h2>
+    <p class="section-sub">LobsterTrap handles the plumbing — Docker, configs, secrets, integrations — so you can focus on what your agent actually does.</p>
+
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-number">01</div>
+        <div class="how-icon">🔧</div>
+        <h3>Install & initialize</h3>
+        <p>One command to install LobsterTrap and set up OpenClaw locally. We check Docker, Python, and everything else is ready.</p>
+        <div class="how-code">
+          <span class="c-red">$</span> lobstertrap doctor<br>
+          <span class="c-green">✓</span> Docker running<br>
+          <span class="c-green">✓</span> Node.js v18+<br>
+          <span class="c-green">✓</span> Python 3.9+
+        </div>
+      </div>
+      <div class="how-card">
+        <div class="how-number">02</div>
+        <div class="how-icon">📦</div>
+        <h3>Pick a template</h3>
+        <p>Choose from Sales, CRM, or Support — or start from scratch. LobsterTrap generates your agent code, Dockerfile, and OpenClaw config.</p>
+        <div class="how-code">
+          <span class="c-red">$</span> lobstertrap new<br>
+          ? Template: <span class="c-green">Sales Agent</span><br>
+          ? Integrations: <span class="c-green">Gmail, Airtable</span>
+        </div>
+      </div>
+      <div class="how-card">
+        <div class="how-number">03</div>
+        <div class="how-icon">🚀</div>
+        <h3>Deploy & monitor</h3>
+        <p>One command builds the Docker image, starts the container, and waits for a healthy response. Open the dashboard and you're done.</p>
+        <div class="how-code">
+          <span class="c-red">$</span> lobstertrap deploy SalesBot<br>
+          <span class="c-green">✓</span> Agent is healthy<br>
+          <span class="c-red">$</span> lobstertrap dashboard
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEMPLATES -->
+<section id="templates" class="templates-bg">
+  <div class="section-inner">
+    <div class="section-tag">Templates</div>
+    <h2 class="section-title">Production-ready agents,<br>out of the box.</h2>
+    <p class="section-sub">Every template ships with working agent code (Claude API), a Dockerfile, OpenClaw config, and integration stubs. Modify, extend, or use as-is.</p>
+
+    <div class="templates-grid">
+      <div class="template-card">
+        <div class="template-icon">💰</div>
+        <h3>Sales Agent</h3>
+        <p>Score leads 0–100, generate personalized outreach emails, suggest follow-up timing. Connects to Gmail and Airtable.</p>
+        <div class="template-tags">
+          <span class="tag">Lead scoring</span>
+          <span class="tag">Email gen</span>
+          <span class="tag">Follow-ups</span>
+        </div>
+        <div class="endpoints">
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/score</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/email</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/followup</span></div>
+          <div class="endpoint"><span class="method-get">GET</span>  <span class="path">/health</span></div>
+        </div>
+      </div>
+      <div class="template-card">
+        <div class="template-icon">🤝</div>
+        <h3>CRM Agent</h3>
+        <p>Categorize customers by tier and churn risk, recommend pipeline stage transitions, draft check-in messages.</p>
+        <div class="template-tags">
+          <span class="tag">Categorization</span>
+          <span class="tag">Pipeline</span>
+          <span class="tag">Churn risk</span>
+        </div>
+        <div class="endpoints">
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/categorize</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/pipeline</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/checkin</span></div>
+          <div class="endpoint"><span class="method-get">GET</span>  <span class="path">/health</span></div>
+        </div>
+      </div>
+      <div class="template-card">
+        <div class="template-icon">🎧</div>
+        <h3>Support Agent</h3>
+        <p>Triage tickets by priority and category, route to the right team, draft empathetic responses, detect issue patterns.</p>
+        <div class="template-tags">
+          <span class="tag">Triage</span>
+          <span class="tag">Routing</span>
+          <span class="tag">Responses</span>
+        </div>
+        <div class="endpoints">
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/triage</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/respond</span></div>
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/patterns</span></div>
+          <div class="endpoint"><span class="method-get">GET</span>  <span class="path">/health</span></div>
+        </div>
+      </div>
+      <div class="template-card">
+        <div class="template-icon">⚙️</div>
+        <h3>Custom Agent</h3>
+        <p>Blank slate with the full scaffolding in place. System prompt, Flask server, .env, Dockerfile — all there, ready to customize.</p>
+        <div class="template-tags">
+          <span class="tag">Custom logic</span>
+          <span class="tag">Any use case</span>
+        </div>
+        <div class="endpoints">
+          <div class="endpoint"><span class="method-post">POST</span> <span class="path">/process</span></div>
+          <div class="endpoint"><span class="method-get">GET</span>  <span class="path">/health</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD PREVIEW -->
+<section>
+  <div class="section-inner">
+    <div class="section-tag">Dashboard</div>
+    <h2 class="section-title">Everything you need<br>to see, in one place.</h2>
+    <p class="section-sub">Run <code style="background:#1a1a1a;padding:2px 6px;border-radius:4px;font-size:0.9em">lobstertrap dashboard</code> to open the live monitoring UI. CPU, memory, streaming logs, agent health — all updating in real time.</p>
+
+    <!-- Mock Dashboard -->
+    <div class="dashboard-preview">
+      <div class="db-header">
+        <div class="db-logo">🦞 LobsterTrap <span style="color:#333;font-weight:400;margin-left:4px">Dashboard</span></div>
+        <div class="db-status">
+          <span style="width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block"></span>
+          2 running · 3 total
+        </div>
+      </div>
+      <div class="db-body">
+        <div class="db-sidebar">
+          <div class="db-sidebar-label">Agents</div>
+          <div class="db-agent-item active">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="db-agent-name">💰 SalesBot</div>
+              <span class="db-pill pill-running">● running</span>
+            </div>
+            <div class="db-agent-meta">Sales Agent · :8000</div>
+          </div>
+          <div class="db-agent-item">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="db-agent-name">🎧 SupportBot</div>
+              <span class="db-pill pill-running">● running</span>
+            </div>
+            <div class="db-agent-meta">Support Agent · :8001</div>
+          </div>
+          <div class="db-agent-item">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div class="db-agent-name">🤝 CRMBot</div>
+              <span class="db-pill pill-stopped">● exited</span>
+            </div>
+            <div class="db-agent-meta">CRM Agent · :8002</div>
+          </div>
+        </div>
+        <div class="db-main">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-weight:700;font-size:1rem">SalesBot</div>
+              <div style="color:#555;font-size:0.78rem">Sales Agent · port 8000 · Gmail, Airtable</div>
+            </div>
+            <div class="db-tabs">
+              <div class="db-tab active">metrics</div>
+              <div class="db-tab">logs</div>
+            </div>
+          </div>
+          <div class="db-stats">
+            <div class="db-stat">
+              <div class="db-stat-label">CPU</div>
+              <div class="db-stat-val" style="color:var(--green)">2.4%</div>
+            </div>
+            <div class="db-stat">
+              <div class="db-stat-label">Memory</div>
+              <div class="db-stat-val">128 MiB</div>
+            </div>
+            <div class="db-stat">
+              <div class="db-stat-label">Net In</div>
+              <div class="db-stat-val">4.2 MB</div>
+            </div>
+            <div class="db-stat">
+              <div class="db-stat-label">Net Out</div>
+              <div class="db-stat-val">1.1 MB</div>
+            </div>
+          </div>
+          <div class="db-chart-area">
+            <div class="db-chart-label">CPU % — live</div>
+            <svg class="db-chart-svg" viewBox="0 0 500 80" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,70 C30,70 40,55 80,50 C120,45 140,60 180,52 C220,44 240,30 280,28 C320,26 340,40 380,35 C420,30 460,20 500,18 L500,80 L0,80 Z" fill="url(#cg)"/>
+              <path d="M0,70 C30,70 40,55 80,50 C120,45 140,60 180,52 C220,44 240,30 280,28 C320,26 340,40 380,35 C420,30 460,20 500,18" fill="none" stroke="#7c3aed" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-bg">
+  <div class="section-inner">
+    <div class="section-tag">Features</div>
+    <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🐳</div>
+        <h3>Docker-native</h3>
+        <p>Every agent runs in its own container. Consistent, isolated, portable. No environment drift, ever.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>One-command deploy</h3>
+        <p><code style="font-size:0.85em;background:#111;padding:1px 5px;border-radius:3px">lobstertrap deploy</code> builds, runs, and health-checks your agent end to end.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <h3>Integrations built in</h3>
+        <p>Connect Gmail, Airtable, and Slack with guided auth flows. Credentials go straight to your .env.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Live monitoring</h3>
+        <p>CPU, memory, network charts. Streaming SSE log viewer. All in a local web dashboard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <h3>Your keys, your agents</h3>
+        <p>You bring your Anthropic API key. LobsterTrap never touches your API calls or bills you for Claude usage.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">☸️</div>
+        <h3>Kubernetes ready</h3>
+        <p>OpenClaw YAML config is generated for every agent. Scale to Kubernetes when you outgrow local Docker.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="section-inner">
+    <div class="section-tag">Pricing</div>
+    <h2 class="section-title">Start free.<br>Scale when you're ready.</h2>
+    <p class="section-sub">No usage fees. No hidden Claude API markup. You own your agents and your infrastructure.</p>
+
+    <div class="pricing-grid">
+      <!-- Free -->
+      <div class="pricing-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">Free</div>
+        <p class="plan-tagline">For hobbyists and exploration.</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>1 agent</li>
+          <li>All 4 templates</li>
+          <li>Local Docker deploy</li>
+          <li>CLI + dashboard</li>
+          <li>Community support</li>
+          <li class="dim">Integrations (Gmail, Airtable, Slack)</li>
+          <li class="dim">Priority support</li>
+          <li class="dim">Kubernetes config</li>
+        </ul>
+        <button class="plan-btn plan-btn-ghost">Get started free</button>
+      </div>
+
+      <!-- Pro -->
+      <div class="pricing-card popular">
+        <div class="popular-badge">Most popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price"><sup>$</sup>29<span class="period">/month</span></div>
+        <p class="plan-tagline">For founders and small teams.</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>5 agents</li>
+          <li>All 4 templates</li>
+          <li>Local + cloud deploy</li>
+          <li>CLI + dashboard</li>
+          <li>Gmail, Airtable, Slack</li>
+          <li>Kubernetes YAML config</li>
+          <li>Email support</li>
+          <li class="dim">Custom templates</li>
+        </ul>
+        <button class="plan-btn plan-btn-primary">Start Pro →</button>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="pricing-card">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price" style="font-size:2rem">Custom</div>
+        <p class="plan-tagline">For teams that need more control.</p>
+        <hr class="plan-divider">
+        <ul class="plan-features">
+          <li>Unlimited agents</li>
+          <li>Custom templates</li>
+          <li>Managed cloud deploy</li>
+          <li>SSO + team access</li>
+          <li>All integrations + custom</li>
+          <li>SLA + dedicated support</li>
+          <li>On-prem option</li>
+          <li>Audit logs</li>
+        </ul>
+        <button class="plan-btn plan-btn-ghost">Talk to us →</button>
+      </div>
+    </div>
+    <p class="pricing-note">All plans include your own Anthropic API key — we never markup or proxy your Claude usage. <a href="#">Compare plans in full →</a></p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Your first agent,<br>running in 5 minutes.</h2>
+  <p>No DevOps. No Docker expertise. No infrastructure headaches.</p>
+  <div>
+    <div class="cta-terminal">
+      <span class="c-red">$</span> <span class="c-white">npm install -g lobstertrap</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+    <a href="#pricing" class="btn-primary" style="font-size:1rem;padding:0.85rem 1.75rem">Start free →</a>
+    <a href="https://github.com/psych1cparr0t-dev/lobstertrap" class="btn-ghost" style="font-size:1rem;padding:0.85rem 1.75rem" target="_blank">View on GitHub</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">🦞 LobsterTrap</div>
+  <div class="footer-links">
+    <a href="https://github.com/psych1cparr0t-dev/lobstertrap" target="_blank">GitHub</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#templates">Templates</a>
+    <a href="mailto:hello@lobstertrap.dev">Contact</a>
+  </div>
+  <div>© 2026 LobsterTrap. Built with 🦞</div>
+</footer>
+
+</body>
+</html>
