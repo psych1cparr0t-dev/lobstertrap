@@ -59,6 +59,7 @@ Endpoints:
 """
 
 import os
+import json
 import time
 import logging
 from flask import Flask, request, jsonify
@@ -96,9 +97,11 @@ else:
 _chat_histories: dict = defaultdict(list)
 MAX_TURNS = 20
 
-# ── System prompt ────────────────────────────────────────────────────────────
+# ── Hot-reloadable system prompt ─────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are a senior CRM strategist and customer success expert with 15+ years in B2B SaaS.
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent_config.json")
+
+DEFAULT_SYSTEM_PROMPT = """You are a senior CRM strategist and customer success expert with 15+ years in B2B SaaS.
 
 CUSTOMER TIER DEFINITIONS:
   enterprise  — ACV > $50k OR 500+ seats OR Fortune 1000
@@ -132,6 +135,24 @@ When answering conversational questions:
   - If asked to compare customers, structure your analysis clearly.
   - Proactively surface risks the user may not have asked about."""
 
+def load_system_prompt() -> str:
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f).get("system_prompt", DEFAULT_SYSTEM_PROMPT)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return DEFAULT_SYSTEM_PROMPT
+
+def save_system_prompt(prompt: str) -> None:
+    config: dict = {}
+    try:
+        with open(CONFIG_FILE) as f:
+            config = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    config["system_prompt"] = prompt
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
 # ── Retry wrapper ────────────────────────────────────────────────────────────
 
 def call_with_tool(messages: list, tool: dict, max_retries: int = 3) -> dict:
@@ -140,7 +161,7 @@ def call_with_tool(messages: list, tool: dict, max_retries: int = 3) -> dict:
             response = client.messages.create(
                 model="claude-sonnet-4-6",
                 max_tokens=1024,
-                system=SYSTEM_PROMPT,
+                system=load_system_prompt(),
                 tools=[tool],
                 tool_choice={"type": "any"},
                 messages=messages,
@@ -433,6 +454,33 @@ def sync():
         enriched = {}
 
     return jsonify({"record_id": record_id, "fields": fields, "enrichment": enriched})
+
+
+@app.route("/configure", methods=["POST"])
+def configure():
+    """Hot-reload the system prompt. Accepts a plain-English instruction."""
+    data = request.get_json(silent=True) or {}
+    instruction = str(data.get("instruction", "")).strip()
+    if not instruction:
+        return jsonify({"error": "instruction field required"}), 400
+    current = load_system_prompt()
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": (
+                f"Current system prompt:\\n{current}\\n\\nInstruction: {instruction}\\n\\n"
+                "Rewrite the system prompt to incorporate this instruction. "
+                "Return ONLY the updated system prompt, no explanation."
+            )}],
+        )
+        new_prompt = resp.content[0].text.strip()
+    except Exception as exc:
+        log.error("Configure failed: %s", exc)
+        return jsonify({"error": "Could not update system prompt"}), 503
+    save_system_prompt(new_prompt)
+    log.info("System prompt updated via /configure")
+    return jsonify({"ok": True, "system_prompt": new_prompt})
 
 
 if __name__ == "__main__":

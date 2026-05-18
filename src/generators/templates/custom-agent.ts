@@ -59,6 +59,7 @@ Endpoints
 """
 
 import os
+import json
 import time
 import logging
 from flask import Flask, request, jsonify
@@ -74,15 +75,35 @@ client = Anthropic()
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-# Load the system prompt from the environment so operators can customise the
-# agent's role without modifying this file.
-SYSTEM_PROMPT = os.environ.get(
+DEFAULT_SYSTEM_PROMPT = os.environ.get(
     "SYSTEM_PROMPT",
     (
         "You are a helpful AI assistant. Answer questions clearly and concisely. "
         "If you are unsure about something, say so rather than guessing."
     ),
 )
+
+# agent_config.json lives next to this file and is the live-editable config store.
+# /configure rewrites it; load_system_prompt() reads it fresh on every request.
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "agent_config.json")
+
+def load_system_prompt() -> str:
+    try:
+        with open(CONFIG_FILE) as f:
+            return json.load(f).get("system_prompt", DEFAULT_SYSTEM_PROMPT)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return DEFAULT_SYSTEM_PROMPT
+
+def save_system_prompt(prompt: str) -> None:
+    config: dict = {}
+    try:
+        with open(CONFIG_FILE) as f:
+            config = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    config["system_prompt"] = prompt
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
 
 MAX_SESSION_TURNS = 20  # maximum user+assistant turn pairs stored per session
 
@@ -170,7 +191,7 @@ def process():
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=load_system_prompt(),
             messages=[{"role": "user", "content": user_input}],
         )
         output = response.content[0].text
@@ -207,7 +228,7 @@ def chat():
         response = client.messages.create(
             model="claude-sonnet-4-6",
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=load_system_prompt(),  # hot-reloaded on every request
             messages=history,
         )
         reply = response.content[0].text
@@ -221,6 +242,46 @@ def chat():
         "reply":      reply,
         "session_id": session_id,
     })
+
+
+@app.route("/configure", methods=["POST"])
+def configure():
+    """
+    Hot-reload the system prompt without restarting the agent.
+    Accepts a plain-English instruction and Claude rewrites the prompt accordingly.
+
+    Request:  {"instruction": "be more concise and always respond in bullet points"}
+    Response: {"ok": true, "system_prompt": "<new prompt>"}
+    """
+    global _request_count
+    _request_count += 1
+
+    data = request.get_json(silent=True) or {}
+    instruction = str(data.get("instruction", "")).strip()
+    if not instruction:
+        return jsonify({"error": "instruction field required"}), 400
+
+    current = load_system_prompt()
+    try:
+        resp = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            messages=[{"role": "user", "content": (
+                f"Current system prompt:\\n{current}\\n\\n"
+                f"Instruction: {instruction}\\n\\n"
+                "Rewrite the system prompt to incorporate this instruction. "
+                "Keep the same format, style, and level of detail. "
+                "Return ONLY the updated system prompt text, no explanation."
+            )}],
+        )
+        new_prompt = resp.content[0].text.strip()
+    except Exception as exc:
+        log.error("Claude configure call failed: %s", exc)
+        return jsonify({"error": "Could not update system prompt"}), 503
+
+    save_system_prompt(new_prompt)
+    log.info("System prompt updated via /configure")
+    return jsonify({"ok": True, "system_prompt": new_prompt})
 
 
 @app.route("/chat/reset", methods=["POST"])

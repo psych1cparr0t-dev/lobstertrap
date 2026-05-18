@@ -29,6 +29,9 @@ export default function ChatBar({ agent }: { agent: Agent }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  const isConfigCommand = (text: string) =>
+    text.startsWith('/config ') || text.toLowerCase().startsWith('/configure ');
+
   async function send() {
     const text = input.trim();
     if (!text || loading) return;
@@ -39,22 +42,42 @@ export default function ChatBar({ agent }: { agent: Agent }) {
     setLoading(true);
     setError(null);
 
+    const configuring = isConfigCommand(text);
+    const instruction = configuring
+      ? text.replace(/^\/configur?e? /i, '').trim()
+      : null;
+
     try {
-      const res = await fetch(`http://localhost:${agent.port}/chat`, {
+      const endpoint = configuring ? 'configure' : 'chat';
+      const body = configuring
+        ? { instruction }
+        : { message: text, session_id: SESSION_ID };
+
+      const res = await fetch(`http://localhost:${agent.port}/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, session_id: SESSION_ID }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error(`Agent returned ${res.status}`);
 
       const data = await res.json();
-      const reply = data.reply ?? data.response ?? JSON.stringify(data);
-      setMessages((m) => [...m, { role: 'agent', content: reply, ts: Date.now() }]);
+
+      if (configuring) {
+        const preview = (data.system_prompt as string ?? '').slice(0, 120);
+        setMessages((m) => [...m, {
+          role: 'agent',
+          content: `🔧 System prompt updated.\n\nPreview: ${preview}${preview.length === 120 ? '…' : ''}`,
+          ts: Date.now(),
+        }]);
+      } else {
+        const reply = data.reply ?? data.response ?? JSON.stringify(data);
+        setMessages((m) => [...m, { role: 'agent', content: reply, ts: Date.now() }]);
+      }
     } catch (e: any) {
       setError(
         agent.dockerStatus !== 'running'
-          ? 'Agent is not running. Deploy it first with lobstertrap deploy ' + agent.name
+          ? 'Agent is not running. Deploy it first with: lobstertrap deploy ' + agent.name
           : 'Could not reach agent: ' + e.message
       );
     } finally {
@@ -81,8 +104,10 @@ export default function ChatBar({ agent }: { agent: Agent }) {
           }}>
             <span style={{ fontSize: '1.8rem' }}>💬</span>
             <span style={{ fontSize: '0.88rem' }}>Chat with {agent.name}</span>
-            <span style={{ fontSize: '0.78rem', color: '#2a2a2a', textAlign: 'center', maxWidth: 300 }}>
-              Ask it anything, test its capabilities, or adjust its behaviour in plain English.
+            <span style={{ fontSize: '0.78rem', color: '#2a2a2a', textAlign: 'center', maxWidth: 320 }}>
+              Ask it anything, or type{' '}
+              <span style={{ fontFamily: 'monospace', color: '#444' }}>/config be more concise</span>
+              {' '}to update its behaviour live — no restart needed.
             </span>
           </div>
         )}
