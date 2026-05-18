@@ -3,8 +3,9 @@ import { Agent } from './types';
 import AgentCard from './components/AgentCard';
 import MetricsPanel from './components/MetricsPanel';
 import LogViewer from './components/LogViewer';
+import ChatBar from './components/ChatBar';
 
-type Tab = 'metrics' | 'logs';
+type Tab = 'metrics' | 'logs' | 'chat';
 
 const MOCK_AGENTS: Agent[] = [
   { name: 'SalesBot', template: 'Sales Agent', port: '8000', status: 'running', dockerStatus: 'running', integrations: ['Gmail', 'Airtable'], createdAt: new Date().toISOString(), lastDeployedAt: new Date().toISOString(), dir: '' },
@@ -115,7 +116,7 @@ export default function App() {
 
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '0.25rem', background: '#141414', borderRadius: 8, padding: 3 }}>
-                  {(['metrics', 'logs'] as Tab[]).map((t) => (
+                  {(['metrics', 'logs', 'chat'] as Tab[]).map((t) => (
                     <button
                       key={t}
                       onClick={() => setTab(t)}
@@ -138,13 +139,18 @@ export default function App() {
               </div>
 
               {/* Tab content */}
-              <div style={{ flex: 1, padding: '1.25rem 1.5rem', overflowY: 'auto' }}>
-                {tab === 'metrics' && <MetricsPanel agentName={selectedAgent.name} />}
+              <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {tab === 'metrics' && (
+                  <div style={{ flex: 1, padding: '1.25rem 1.5rem', overflowY: 'auto' }}>
+                    <MetricsPanel agentName={selectedAgent.name} />
+                  </div>
+                )}
                 {tab === 'logs' && (
-                  <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ flex: 1, padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <LogViewer agentName={selectedAgent.name} />
                   </div>
                 )}
+                {tab === 'chat' && <ChatBar agent={selectedAgent} />}
               </div>
             </>
           ) : (
