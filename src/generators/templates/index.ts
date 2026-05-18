@@ -1,4 +1,4 @@
-import { salesAgentTemplate } from './sales-agent';
+import { customerServiceAgentTemplate } from './customer-service-agent';
 import { crmAgentTemplate } from './crm-agent';
 import { supportAgentTemplate } from './support-agent';
 import { customAgentTemplate } from './custom-agent';
@@ -10,18 +10,14 @@ export interface AgentTemplate {
 }
 
 const TEMPLATES: Record<string, AgentTemplate> = {
-  sales: salesAgentTemplate,
+  'customer-service': customerServiceAgentTemplate,
   crm: crmAgentTemplate,
   support: supportAgentTemplate,
   custom: customAgentTemplate,
 };
 
 export function getTemplate(key: string): AgentTemplate {
-  const template = TEMPLATES[key];
-  if (!template) {
-    return customAgentTemplate;
-  }
-  return template;
+  return TEMPLATES[key] ?? customAgentTemplate;
 }
 
 export function listTemplates(): AgentTemplate[] {

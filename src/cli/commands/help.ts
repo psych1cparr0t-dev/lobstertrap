@@ -22,7 +22,7 @@ ${chalk.bold('AGENTS')}
   ${chalk.cyan('scale')} <agent> <replicas>  Scale agent replicas up or down
 
 ${chalk.bold('INTEGRATIONS')}
-  ${chalk.cyan('connect')} <agent> <service>  Add an integration (gmail, airtable, slack)
+  ${chalk.cyan('connect')} <agent> <service>  Add an integration (gmail, airtable, slack, twilio)
 
 ${chalk.bold('MONITORING')}
   ${chalk.cyan('metrics')} <agent> [-w]       Live CPU, memory, network stats (-w to watch)

@@ -1,12 +1,11 @@
 import chalk from 'chalk';
-import ora from 'ora';
-import inquirer from 'inquirer';
 import { loadState } from './init-openclaw';
 import { connectGmail } from '../../integrations/gmail';
 import { connectAirtable } from '../../integrations/airtable';
 import { connectSlack } from '../../integrations/slack';
+import { connectTwilio } from '../../integrations/twilio';
 
-const SUPPORTED = ['gmail', 'airtable', 'slack'];
+const SUPPORTED = ['gmail', 'airtable', 'slack', 'twilio'];
 
 export async function connectIntegration(args: string[]): Promise<void> {
   const [agentName, service] = args;
@@ -36,14 +35,9 @@ export async function connectIntegration(args: string[]): Promise<void> {
   console.log(chalk.cyan(`\n🦞 Connecting ${service} to ${agentName}\n`));
 
   switch (serviceLower) {
-    case 'gmail':
-      await connectGmail(agentName);
-      break;
-    case 'airtable':
-      await connectAirtable(agentName);
-      break;
-    case 'slack':
-      await connectSlack(agentName);
-      break;
+    case 'gmail':    await connectGmail(agentName);   break;
+    case 'airtable': await connectAirtable(agentName); break;
+    case 'slack':    await connectSlack(agentName);    break;
+    case 'twilio':   await connectTwilio(agentName);   break;
   }
 }

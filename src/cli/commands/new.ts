@@ -10,8 +10,8 @@ import { getTemplate } from '../../generators/templates/index';
 import { validateAgentName } from '../../utils/validators';
 import { loadState } from './init-openclaw';
 
-const TEMPLATES = ['Sales Agent', 'CRM Agent', 'Support Agent', 'Custom Agent'];
-const INTEGRATIONS = ['Gmail', 'Airtable', 'Slack', 'Stripe', 'None'];
+const TEMPLATES = ['Customer Service Agent', 'CRM Agent', 'Support Agent', 'Custom Agent'];
+const INTEGRATIONS = ['Gmail', 'Airtable', 'Slack', 'Twilio', 'Stripe'];
 
 export async function newAgent(_args: string[]): Promise<void> {
   console.log(chalk.cyan('\n🦞 LobsterTrap — New Agent\n'));
@@ -69,7 +69,7 @@ export async function newAgent(_args: string[]): Promise<void> {
   try {
     fs.mkdirSync(agentDir, { recursive: true });
 
-    const templateKey = answers.template.toLowerCase().replace(' agent', '').replace(' ', '-');
+    const templateKey = answers.template.toLowerCase().replace(/ agent$/, '').replace(/\s+/g, '-');
     const template = getTemplate(templateKey);
 
     fs.writeFileSync(path.join(agentDir, `${templateKey}_agent.py`), template.agentCode);
