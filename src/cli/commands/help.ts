@@ -8,7 +8,8 @@ ${chalk.bold('USAGE')}
   lobstertrap <command> [options]
 
 ${chalk.bold('SETUP')}
-  ${chalk.cyan('init-openclaw')}              Download and configure OpenClaw locally
+  ${chalk.cyan('setup')}                      Guided setup: system check, API key, OpenClaw (start here!)
+  ${chalk.cyan('init-openclaw')}              Same as setup
   ${chalk.cyan('doctor')}                     Check all dependencies and system requirements
   ${chalk.cyan('login')} <key>               Activate a Pro or Team license key
 

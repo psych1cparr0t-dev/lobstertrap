@@ -6,12 +6,12 @@ const INTEGRATION_ENV_VARS: Record<string, string[]> = {
   Twilio:  ['TWILIO_ACCOUNT_SID=', 'TWILIO_AUTH_TOKEN=', 'TWILIO_PHONE_NUMBER=', 'PUBLIC_URL=', 'ESCALATION_PHONE_NUMBER='],
 };
 
-export function generateEnvFile(integrations: string[]): string {
+export function generateEnvFile(integrations: string[], anthropicApiKey = ''): string {
   const base = [
     '# LobsterTrap Agent Environment',
     '',
     '# Anthropic',
-    'ANTHROPIC_API_KEY=',
+    `ANTHROPIC_API_KEY=${anthropicApiKey}`,
     '',
     '# Runtime',
     'PORT=8000',

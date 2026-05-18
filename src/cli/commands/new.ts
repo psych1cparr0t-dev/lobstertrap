@@ -76,7 +76,8 @@ export async function newAgent(_args: string[]): Promise<void> {
     fs.writeFileSync(path.join(agentDir, 'Dockerfile'), generateDockerfile(templateKey, answers.integrations));
     fs.writeFileSync(path.join(agentDir, 'openclaw-deployment.yaml'), generateOpenClawConfig(answers.name, templateKey, answers.port));
     fs.writeFileSync(path.join(agentDir, '.env.example'), generateEnvFile(answers.integrations));
-    fs.writeFileSync(path.join(agentDir, '.env'), generateEnvFile(answers.integrations));
+    const globalKey = (loadState().anthropicApiKey as string) ?? '';
+    fs.writeFileSync(path.join(agentDir, '.env'), generateEnvFile(answers.integrations, globalKey));
     fs.writeFileSync(path.join(agentDir, '.gitignore'), '.env\n__pycache__/\n*.pyc\n');
 
     // Register agent in state
@@ -98,6 +99,11 @@ export async function newAgent(_args: string[]): Promise<void> {
     throw err;
   }
 
+  const globalKey = (loadState().anthropicApiKey as string) ?? '';
+  const keyStep = globalKey
+    ? chalk.green('  ✓ Anthropic API key pre-filled from setup')
+    : `  1. Add your key to ${chalk.cyan(path.join(process.cwd(), answers.name, '.env'))}`;
+
   console.log(`
 ${chalk.green('✓ Agent created:')} ${chalk.bold(answers.name)}
 
@@ -107,10 +113,10 @@ ${chalk.green('✓ Agent created:')} ${chalk.bold(answers.name)}
 
 ${chalk.bold('Next steps:')}
 
-  1. Edit ${chalk.cyan('.env')} with your API keys
-  2. Build and deploy:
-     ${chalk.cyan(`cd ${answers.name} && docker build -t ${answers.name.toLowerCase()} .`)}
-  3. Check status:
+${keyStep}
+  ${globalKey ? '1' : '2'}. Deploy:
+     ${chalk.cyan(`lobstertrap deploy ${answers.name}`)}
+  ${globalKey ? '2' : '3'}. Check status:
      ${chalk.cyan(`lobstertrap status ${answers.name}`)}
 `);
 }

@@ -16,6 +16,7 @@ import { showHelp } from './cli/commands/help';
 import { loginUser } from './cli/commands/login';
 
 const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
+  'setup': (args) => initOpenClaw(args),
   'init-openclaw': (args) => initOpenClaw(args),
   'new': (args) => newAgent(args),
   'deploy': (args) => deployAgent(args),
