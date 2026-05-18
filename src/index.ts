@@ -13,6 +13,7 @@ import { agentMetrics } from './cli/commands/metrics';
 import { openDashboard } from './cli/commands/dashboard';
 import { runDoctor } from './cli/commands/doctor';
 import { showHelp } from './cli/commands/help';
+import { loginUser } from './cli/commands/login';
 
 const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   'init-openclaw': (args) => initOpenClaw(args),
@@ -28,6 +29,7 @@ const COMMANDS: Record<string, (args: string[]) => Promise<void>> = {
   'metrics': (args) => agentMetrics(args),
   'dashboard': (args) => openDashboard(args),
   'doctor': (args) => runDoctor(args),
+  'login': (args) => loginUser(args),
   'help': (args) => showHelp(args),
 };
 

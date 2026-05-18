@@ -10,6 +10,7 @@ ${chalk.bold('USAGE')}
 ${chalk.bold('SETUP')}
   ${chalk.cyan('init-openclaw')}              Download and configure OpenClaw locally
   ${chalk.cyan('doctor')}                     Check all dependencies and system requirements
+  ${chalk.cyan('login')} <key>               Activate a Pro or Team license key
 
 ${chalk.bold('AGENTS')}
   ${chalk.cyan('new')}                        Create a new agent from a template

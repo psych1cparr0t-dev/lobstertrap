@@ -22,6 +22,9 @@ export async function deployAgent(args: string[]): Promise<void> {
 
   const state = loadState();
   const agents = (state.agents as Record<string, unknown>[]) ?? [];
+
+  enforceAgentCap(agentName, agents, state);
+
   const agent = agents.find((a) => a.name === agentName);
 
   if (!agent) {
@@ -77,6 +80,32 @@ ${chalk.green('✓ ' + agentName + ' is live')}
   ${chalk.gray('Logs:')}   lobstertrap logs ${agentName} -f
   ${chalk.gray('Stop:')}   lobstertrap stop ${agentName}
 `);
+}
+
+const PLAN_LIMITS: Record<string, number> = { free: 1, pro: 5, team: Infinity };
+
+function enforceAgentCap(
+  agentName: string,
+  agents: Record<string, unknown>[],
+  state: Record<string, unknown>
+): void {
+  const plan = (state.plan as string) ?? 'free';
+  const limit = PLAN_LIMITS[plan] ?? 1;
+  if (limit === Infinity) return;
+
+  const runningOthers = agents.filter(
+    (a) => a.name !== agentName && a.status === 'running'
+  ).length;
+
+  if (runningOthers >= limit) {
+    const limitLabel = limit === 1 ? '1 active agent' : `${limit} active agents`;
+    console.error(chalk.red(`\n✗ ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan is limited to ${limitLabel}.`));
+    console.log(`\n  You currently have ${runningOthers} other running agent${runningOthers === 1 ? '' : 's'}.`);
+    console.log(`  Stop one first:  ${chalk.cyan('lobstertrap stop <agent>')}`);
+    console.log(`  Or upgrade at:   ${chalk.cyan('https://lobstertrap.dev/upgrade')}`);
+    console.log(`  Then activate:   ${chalk.cyan('lobstertrap login <your-key>')}\n`);
+    process.exit(1);
+  }
 }
 
 async function stopExistingContainer(containerName: string): Promise<void> {
