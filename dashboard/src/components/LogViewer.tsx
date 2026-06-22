@@ -9,6 +9,12 @@ interface LogLine {
   ts: string;
 }
 
+function dimLine(line: string): string {
+  if (line.includes('ERROR') || line.includes('error') || line.includes('Error')) return '#888';
+  if (line.includes('WARN') || line.includes('warn')) return '#555';
+  return '#3a3a3a';
+}
+
 export default function LogViewer({ agentName }: Props) {
   const [lines, setLines] = useState<LogLine[]>([]);
   const [connected, setConnected] = useState(false);
@@ -34,74 +40,53 @@ export default function LogViewer({ agentName }: Props) {
 
     es.onerror = () => {
       setConnected(false);
-      setError('Log stream disconnected. Container may not be running.');
+      setError('Stream disconnected. Container may not be running.');
       es.close();
     };
 
-    return () => {
-      es.close();
-      setConnected(false);
-    };
+    return () => { es.close(); setConnected(false); };
   }, [agentName]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [lines]);
 
-  const colorize = (line: string): React.ReactNode => {
-    if (line.includes('ERROR') || line.includes('error') || line.includes('Error')) {
-      return <span style={{ color: '#f87171' }}>{line}</span>;
-    }
-    if (line.includes('WARN') || line.includes('warn') || line.includes('Warning')) {
-      return <span style={{ color: '#facc15' }}>{line}</span>;
-    }
-    if (line.includes('INFO') || line.includes('info') || line.includes('GET') || line.includes('POST')) {
-      return <span style={{ color: '#86efac' }}>{line}</span>;
-    }
-    return <span style={{ color: '#a0a0a0' }}>{line}</span>;
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-        <span style={{
-          width: 7, height: 7, borderRadius: '50%',
-          background: connected ? '#4ade80' : '#6b7280',
-          display: 'inline-block',
-        }} />
-        <span style={{ fontSize: '0.75rem', color: '#555' }}>
-          {connected ? 'Live' : 'Disconnected'} — {lines.length} lines
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <span style={{ fontSize: '0.72rem', color: connected ? '#555' : '#2e2e2e', letterSpacing: '0.03em' }}>
+          {connected ? 'live' : 'disconnected'} — {lines.length} lines
         </span>
         <button
           onClick={() => setLines([])}
-          style={{ marginLeft: 'auto', background: 'none', border: '1px solid #333', color: '#555', borderRadius: 4, padding: '1px 8px', cursor: 'pointer', fontSize: '0.72rem' }}
+          style={{ marginLeft: 'auto', background: 'none', border: '1px solid #222', color: '#444', borderRadius: 4, padding: '1px 8px', cursor: 'pointer', fontSize: '0.72rem' }}
         >
-          Clear
+          clear
         </button>
       </div>
 
-      {error && <div style={{ color: '#f87171', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{error}</div>}
+      {error && <div style={{ color: '#555', fontSize: '0.78rem', marginBottom: '0.5rem' }}>{error}</div>}
 
       <div style={{
         flex: 1,
         background: '#080808',
-        border: '1px solid #1e1e1e',
-        borderRadius: 8,
+        border: '1px solid #1a1a1a',
+        borderRadius: 6,
         padding: '0.75rem',
         overflowY: 'auto',
         fontFamily: 'Monaco, Menlo, "Courier New", monospace',
-        fontSize: '0.75rem',
-        lineHeight: 1.6,
+        fontSize: '0.73rem',
+        lineHeight: 1.65,
       }}>
         {lines.length === 0 && (
-          <span style={{ color: '#333' }}>Waiting for log output...</span>
+          <span style={{ color: '#222' }}>Waiting for output...</span>
         )}
         {lines.map((l, i) => (
           <div key={i} style={{ display: 'flex', gap: '0.75rem' }}>
-            <span style={{ color: '#333', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <span style={{ color: '#222', whiteSpace: 'nowrap', flexShrink: 0 }}>
               {new Date(l.ts).toLocaleTimeString()}
             </span>
-            {colorize(l.line)}
+            <span style={{ color: dimLine(l.line) }}>{l.line}</span>
           </div>
         ))}
         <div ref={bottomRef} />
